@@ -23,13 +23,70 @@
                 </div>
             </div>
 
-            <!-- Right Side: User Profile Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ml-6">
+            <!-- Right Side: Notifications & User Profile Dropdown -->
+            <div class="hidden sm:flex sm:items-center sm:ml-6 gap-6">
+                
+                <!-- Notification Bell -->
+                <div class="relative" x-data="{ openNotif: false }" @click.outside="openNotif = false">
+                    <button @click="openNotif = !openNotif" class="relative text-gray-400 hover:text-white transition p-2 rounded-full hover:bg-gray-700/50 focus:outline-none mt-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                        
+                        @if(auth()->user()->unreadNotifications->count() > 0)
+                            <span class="absolute top-1 right-1 flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-gray-900"></span>
+                            </span>
+                        @endif
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div x-show="openNotif" 
+                         x-transition:enter="transition ease-out duration-200" 
+                         x-transition:enter-start="opacity-0 scale-95" 
+                         x-transition:enter-end="opacity-100 scale-100" 
+                         x-transition:leave="transition ease-in duration-75" 
+                         x-transition:leave-start="opacity-100 scale-100" 
+                         x-transition:leave-end="opacity-0 scale-95" 
+                         class="absolute right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-50 overflow-hidden" 
+                         style="display: none; width: 400px !important;">
+                        
+                        <div class="px-4 py-3 text-xs text-gray-400 border-b border-gray-700 font-bold uppercase tracking-wider bg-gray-900/50">Notifications</div>
+                        
+                        <div class="max-h-80 overflow-y-auto w-full">
+                            @forelse(auth()->user()->notifications->take(10) as $notification)
+                                <a href="{{ $notification->data['url'] ?? '#' }}" class="block px-4 py-3 border-b border-gray-700/50 hover:bg-gray-700/50 transition w-full" style="white-space: normal !important;">
+                                    <div class="flex items-start gap-3 w-full">
+                                        <div class="mt-0.5 shrink-0">
+                                            @if(($notification->data['icon'] ?? '') == 'check')
+                                                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            @elseif(($notification->data['icon'] ?? '') == 'x')
+                                                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                            @else
+                                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            @endif
+                                        </div>
+                                        <div class="flex-1 w-full">
+                                            <p class="text-sm font-bold text-gray-200">{{ $notification->data['title'] ?? 'Update' }}</p>
+                                            <p class="text-xs text-gray-400 mt-1 leading-snug">{{ $notification->data['message'] ?? '' }}</p>
+                                            <p class="text-[10px] text-gray-500 mt-2">{{ $notification->created_at->diffForHumans() }}</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            @empty
+                                <div class="px-4 py-8 text-center text-sm text-gray-500 italic">
+                                    No new notifications.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Profile Dropdown -->
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="flex items-center gap-3 text-sm font-medium text-gray-300 hover:text-white transition focus:outline-none bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-full py-1 pl-1 pr-3 shadow-sm">
                             
-                            <!-- User Avatar Circle (Dynamic with Photo) -->
+                            <!-- User Avatar Circle -->
                             @if(Auth::user()->avatar_url)
                                 <img src="{{ Auth::user()->avatar_url }}" class="h-8 w-8 rounded-full object-cover border border-gray-600 shadow-inner">
                             @else
@@ -46,7 +103,7 @@
                                 </span>
                             </div>
 
-                            <!-- Dropdown Chevron -->
+                            <!-- Chevron -->
                             <svg class="w-4 h-4 text-gray-500 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                     </x-slot>
@@ -60,7 +117,6 @@
                             {{ __('My Profile') }}
                         </x-dropdown-link>
 
-                        <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
@@ -96,7 +152,6 @@
             </x-responsive-nav-link>
         </div>
 
-        <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-600">
             <div class="px-4 flex items-center gap-3">
                 @if(Auth::user()->avatar_url)

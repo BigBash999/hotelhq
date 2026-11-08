@@ -47,7 +47,8 @@ class LeaveController extends Controller
             'handled_by' => auth()->id(),
             'handled_at' => now(),
         ]);
-
+                // Send notification to the employee
+        $leaveRequest->user->notify(new \App\Notifications\LeaveStatusUpdated($leaveRequest));
         return back()->with('success', 'Leave request ' . $request->status . '.');
     }
 }

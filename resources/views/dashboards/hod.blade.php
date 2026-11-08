@@ -97,8 +97,8 @@
 
                                         <!-- Weekly Hours -->
                                         <div class="flex items-center gap-1 mt-0.5">
-                                            <svg class="w-3 h-3 {{ $emp->weekly_hours > 45 ? 'text-red-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                            <span class="hours-text text-[9px] {{ $emp->weekly_hours > 45 ? 'text-red-400 font-bold' : 'text-gray-400' }}" 
+                                            <svg class="w-3 h-3 {{ $emp->is_overtime ? 'text-red-400' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            <span class="hours-text text-[9px] {{ $emp->is_overtime ? 'text-red-400 font-bold' : 'text-gray-400' }}" 
                                                   data-hours="{{ $emp->weekly_hours }}">
                                                 {{ $emp->weekly_hours }} hrs / week
                                                 @if($emp->is_overtime) (Overtime!) @endif
@@ -118,7 +118,18 @@
                 <!-- The Roster Grid -->
                 <div class="w-full lg:w-3/4 bg-gray-800 border border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden">
                     <div class="p-4 border-b border-gray-700 bg-gray-900/30 flex justify-between items-center">
-                        <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wide">This Week's Roster</h3>
+                        <div class="flex items-center gap-4">
+                            <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wide">Roster</h3>
+                            
+                            <!-- WEEK NAVIGATION -->
+                            <div class="flex items-center gap-2 bg-gray-800 rounded-lg px-2 py-1 border border-gray-600">
+                                <a href="{{ request()->fullUrlWithQuery(['week' => (int)request('week', 0) - 1]) }}" class="text-gray-400 hover:text-white px-1 font-bold">&larr;</a>
+                                <span class="text-xs text-gray-300 font-bold">
+                                    {{ $dates[0]->format('M j') }} - {{ $dates[6]->format('M j, Y') }}
+                                </span>
+                                <a href="{{ request()->fullUrlWithQuery(['week' => (int)request('week', 0) + 1]) }}" class="text-gray-400 hover:text-white px-1 font-bold">&rarr;</a>
+                            </div>
+                        </div>
                         <span class="text-xs text-gray-500">Drag employees from the left.</span>
                     </div>
 
@@ -166,6 +177,58 @@
                 </div>
 
             </div>
+
+            <!-- ATTENDANCE LOGS SECTION (WITH CLOCK OUT) -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden mt-6">
+                <div class="p-4 border-b border-gray-700 bg-gray-900/30 flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wide flex items-center gap-2">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Recent Attendance Logs (This Week)
+                    </h3>
+                </div>
+                <div class="p-4 overflow-x-auto">
+                    @if(isset($attendanceLogs) && $attendanceLogs->isEmpty())
+                        <p class="text-gray-500 text-sm italic">No attendance marked this week yet.</p>
+                    @elseif(isset($attendanceLogs))
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase tracking-wider">
+                                    <th class="p-2 font-bold">Employee</th>
+                                    <th class="p-2 font-bold">Date</th>
+                                    <th class="p-2 font-bold">Shift</th>
+                                    <th class="p-2 font-bold">In</th>
+                                    <th class="p-2 font-bold">Out</th>
+                                    <th class="p-2 font-bold">Hours</th>
+                                    <th class="p-2 font-bold text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-700/50">
+                                @foreach($attendanceLogs as $log)
+                                <tr class="hover:bg-gray-700/30 transition">
+                                    <td class="p-2 text-sm text-gray-200 font-bold">{{ $log->user->name }}</td>
+                                    <td class="p-2 text-xs text-gray-400">{{ \Carbon\Carbon::parse($log->date)->format('M j, Y') }}</td>
+                                    <td class="p-2 text-xs text-indigo-300">{{ $log->roster->shift->name ?? 'N/A' }}</td>
+                                    <td class="p-2 text-xs text-gray-400">{{ $log->check_in_at ? \Carbon\Carbon::parse($log->check_in_at)->format('h:i A') : 'N/A' }}</td>
+                                    <td class="p-2 text-xs text-gray-400">{{ $log->check_out_at ? \Carbon\Carbon::parse($log->check_out_at)->format('h:i A') : '--' }}</td>
+                                    <td class="p-2 text-xs text-emerald-400 font-bold">{{ $log->total_hours ? $log->total_hours . 'h' : '--' }}</td>
+                                    <td class="p-2 text-right">
+                                        @if($log->status == 'present')
+                                            <span class="bg-emerald-900/50 text-emerald-400 border border-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Present</span>
+                                        @elseif($log->status == 'late')
+                                            <span class="bg-yellow-900/50 text-yellow-400 border border-yellow-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Late</span>
+                                        @else
+                                            <span class="bg-red-900/50 text-red-400 border border-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ $log->status }}</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+                </div>
+            </div>
+            <!-- END ATTENDANCE LOGS -->
+
         </div>
     </div>
 

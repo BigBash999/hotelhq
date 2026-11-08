@@ -67,5 +67,20 @@
                 @endif
             });
         </script>
+                </script> <!-- This is line 69 in your file -->
+
+        <script>
+            // Mark notifications as read when page loads
+            @auth
+                fetch('{{ route('notifications.read') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+            @endauth
+        </script>
+    </body> <!-- This is line 70 in your file -->
     </body>
 </html>

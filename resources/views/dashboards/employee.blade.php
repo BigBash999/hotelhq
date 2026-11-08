@@ -163,7 +163,80 @@
                     @endif
                 </div>
             </div>
+            <!-- MY SCHEDULE CALENDAR -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden mt-6">
+                <div class="p-4 border-b border-gray-700 bg-gray-900/30 flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wide flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        My Schedule ({{ now()->format('F Y') }})
+                    </h3>
+                </div>
+                <div class="p-4">
+                    <!-- Days Header -->
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; text-align: center;">
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Mon</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Tue</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Wed</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Thu</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Fri</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Sat</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase">Sun</div>
+                    </div>
+                    
+                    <!-- Calendar Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+                        @php
+                            $startOfMonth = now()->startOfMonth();
+                            $endOfMonth = now()->endOfMonth();
+                            $startDayOfWeek = $startOfMonth->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+                            $daysInMonth = $endOfMonth->day;
+                        @endphp
 
+                        <!-- Empty boxes for days before the 1st -->
+                        @for ($i = 1; $i < $startDayOfWeek; $i++)
+                            <div class="bg-gray-900/20 border border-gray-700/30 rounded-lg min-h-[70px]"></div>
+                        @endfor
+
+                        <!-- Days of the month -->
+                        @for ($day = 1; $day <= $daysInMonth; $day++)
+                            @php
+                                $currentDate = now()->startOfMonth()->addDays($day - 1)->format('Y-m-d');
+                                $isToday = $currentDate === now()->format('Y-m-d');
+                                
+                                $dayShift = $calendarRosters->where('date', $currentDate)->first();
+                                
+                                $isOnLeave = $calendarLeaves->filter(function($leave) use ($currentDate) {
+                                    return $currentDate >= $leave->start_date && $currentDate <= $leave->end_date;
+                                })->isNotEmpty();
+                            @endphp
+
+                            <div class="bg-gray-900 border {{ $isToday ? 'border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'border-gray-700' }} rounded-lg p-2 min-h-[70px] flex flex-col justify-between hover:border-gray-500 transition">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-xs font-bold {{ $isToday ? 'text-indigo-400' : 'text-gray-400' }}">{{ $day }}</span>
+                                    @if($isToday)
+                                        <span class="text-[8px] bg-indigo-900 text-indigo-300 px-1 py-0.5 rounded font-bold uppercase">Today</span>
+                                    @endif
+                                </div>
+                                
+                                <div class="mt-1">
+                                    @if($isOnLeave)
+                                        <div class="text-[9px] bg-yellow-900/50 text-yellow-400 border border-yellow-700/50 px-1 py-0.5 rounded text-center font-bold">
+                                            On Leave
+                                        </div>
+                                    @elseif($dayShift)
+                                        <div class="text-[9px] {{ $dayShift->is_special_event ? 'bg-yellow-600/30 text-yellow-300 border-yellow-500' : 'bg-indigo-900/40 text-indigo-300 border-indigo-700/50' }} border px-1 py-0.5 rounded text-center font-bold leading-tight">
+                                            {{ $dayShift->shift->name }}
+                                            @if($dayShift->is_special_event)
+                                                <span class="block text-[7px] uppercase tracking-widest mt-0.5">Event</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endfor
+                    </div>
+                </div>
+            </div>
             <!-- BOTTOM ROW: Evaluations (Stars) & Swap Requests -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 

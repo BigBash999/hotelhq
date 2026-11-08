@@ -6,15 +6,25 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Shift;
 use App\Models\Roster;
+use App\Models\Attendance;
 use App\Models\ShiftExchange;
 use Carbon\Carbon;
 
 class HodDashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $hod = auth()->user();
         
+        // Determine which week to show (default to current week)
+        $weekOffset = (int) $request->query('week', 0);
+        $startOfWeek = Carbon::now()->startOfWeek()->addWeeks($weekOffset);
+        
+        $dates = [];
+        for ($i = 0; $i < 7; $i++) {
+            $dates[] = $startOfWeek->copy()->addDays($i);
+        }
+
         // Load employees with their evaluations
         $employees = User::where('department_id', $hod->department_id)
             ->where('id', '!=', $hod->id)
@@ -24,13 +34,6 @@ class HodDashboardController extends Controller
 
         // Get shifts for this department
         $shifts = Shift::where('is_active', true)->get();
-
-        // Get current week dates
-        $startOfWeek = Carbon::now()->startOfWeek();
-        $dates = [];
-        for ($i = 0; $i < 7; $i++) {
-            $dates[] = $startOfWeek->copy()->addDays($i);
-        }
 
         // Get all rosters for this week
         $rosters = Roster::where('department_id', $hod->department_id)
@@ -54,8 +57,9 @@ class HodDashboardController extends Controller
             }
             
             $employee->weekly_hours = round($totalMinutes / 60, 1);
-$employee->is_overtime = $employee->weekly_hours > \App\Models\Setting::get('max_weekly_hours', 45);
-return $employee;
+            $employee->is_overtime = $employee->weekly_hours > (int)\App\Models\Setting::get('max_weekly_hours', 45);
+            
+            return $employee;
         });
 
         // Get shift exchanges waiting for HOD approval
@@ -65,7 +69,17 @@ return $employee;
                 $query->where('department_id', $hod->department_id);
             })->get();
 
-        return view('dashboards.hod', compact('employees', 'shifts', 'dates', 'rosters', 'pendingExchanges'));
+        // Fetch attendance records for this department for this week
+        $attendanceLogs = Attendance::with(['user', 'roster.shift'])
+            ->whereHas('user', function($query) use ($hod) {
+                $query->where('department_id', $hod->department_id);
+            })
+            ->whereBetween('date', [$dates[0]->format('Y-m-d'), $dates[6]->format('Y-m-d')])
+            ->orderBy('date', 'desc')
+            ->orderBy('check_in_at', 'desc')
+            ->get();
+
+        return view('dashboards.hod', compact('employees', 'shifts', 'dates', 'rosters', 'pendingExchanges', 'attendanceLogs'));
     }
 
     public function assignShift(Request $request)
